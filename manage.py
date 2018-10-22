@@ -1,12 +1,14 @@
-from flask import Flask
+from flask_migrate import Migrate, MigrateCommand
+from flask_script import Manager
+from info import create_app, db, models
 
-app = Flask(__name__)
+# 通过指定的配置名字创建对应的app
 
-
-@app.route('/')
-def index():
-    return "hello world"
+app = create_app("development")
+manager = Manager(app)
+Migrate(app, db)
+manager.add_command('db', MigrateCommand)
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    manager.run()
