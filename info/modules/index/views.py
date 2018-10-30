@@ -1,30 +1,39 @@
 from flask import current_app, jsonify
+from flask import g
 from flask import request
 from flask import session
 from info import constants
 
-from info.models import User, News
+from info.models import User, News, Category
 from info.modules.index import index_blu
 from flask import render_template
 
 from info.utils.response_code import RET
+from info.utils.common import user_login_data
 
 
 @index_blu.route('/')
+@user_login_data
 def index():
-    # 如果用户已经登陆，将当前登陆用户的数据传到模板中，供模板显示
-    # 获取到当前登陆用户的id
-    user_id = session.get("user_id", None)
-    # 通过id获取用户信息
-    user = None
-    if user_id:
-        try:
-            user = User.query.get(user_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    # # 如果用户已经登陆，将当前登陆用户的数据传到模板中，供模板显示
+    # # 获取到当前登陆用户的id
+    # user_id = session.get("user_id", None)
+    # # 通过id获取用户信息
+    # user = None
+    # if user_id:
+    #     try:
+    #         user = User.query.get(user_id)
+    #     except Exception as e:
+    #         current_app.logger.error(e)
+    user = g.user
     new_list = []
+    categories = []
     try:
+        cate = Category.query.all()
         new_list = News.query.order_by(News.clicks.desc()).limit(6)
+        for category in cate:
+            categories.append(category.name)
+        print(categories, user)
     except Exception as e:
         current_app.logger.error(e)
     new_dict_li = list()
@@ -33,6 +42,7 @@ def index():
     data = {
         "user": user.to_dict() if user else None,
         "new_dict_li": new_dict_li,
+        "categories": categories
     }
     return render_template("news/index.html", data=data)
 
@@ -62,7 +72,7 @@ def get_news_list():
         return jsonify(errno=RET.PARAMERR, errmsg="参数错误")
 
     # 查询数据并分页
-    filterr = []
+    filterr = [News.status == 0]
     # 如果分类id不为１，　那么添加分类id的过滤
     if category_id != 0:
         filterr.append(News.category_id == category_id+1)
@@ -93,10 +103,6 @@ def get_news_list():
                    currentPage=current_page,
                    newsList=news_li,
                    cid=category_id)
-
-
-
-
 
 
 @index_blu.route('/favicon.ico')
